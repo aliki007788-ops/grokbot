@@ -7,7 +7,7 @@ import aiohttp
 from aiohttp import web
 
 # --- تنظیمات ---
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # <<< اینجا توکن رباتت رو جایگزین کن
+BOT_TOKEN = "8334390292:AAG72ghgfOz85zOH3WrK7-2_rW6tx41yLVs"  # <<< اینجا توکن رباتت رو جایگزین کن
 WALLET_ADDRESS = "TPSoFC1qUmzCt7ukgGAMnYwW1CUJeZhiU7"
 USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"  # USDT TRC20
 MIN_AMOUNT = 29_000_000  # 29 USDT in SUN (1 USDT = 1,000,000 SUN)

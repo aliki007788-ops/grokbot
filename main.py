@@ -7,7 +7,7 @@ from aiogram.types import Message
 from aiohttp import web
 
 # --- تنظیمات ---
-BOT_TOKEN = "8334390292:AAG6vqWrK7-2_rW6tx41yLVs"
+BOT_TOKEN = "8334390292:AAG72ghgfOz85zOH3WrK7-2_rW6tx41yLVs"
 WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
 WEBHOOK_URL = f"https://grokbot-1dwv.onrender.com{WEBHOOK_PATH}"
 WALLET_ADDRESS = "TPSoFC1qUmzCt7ukgGAMnYwW1CUJeZhiU7"

@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiohttp import web
+import aiohttp
 
 # --- تنظیمات ---
 BOT_TOKEN = "8334390292:AAG72ghgfOz85zOH3WrK7-2_rW6tx41yLVs"
@@ -55,13 +56,16 @@ async def send_pdf(user_id: int):
         with open(PDF_PATH, "rb") as pdf:
             await bot.send_document(user_id, pdf)
         paid_users.add(user_id)
+        logging.info(f"✅ PDF sent to user {user_id}")
+    except FileNotFoundError:
+        logging.error(f"❌ File '{PDF_PATH}' not found! Make sure it's in the repo root.")
+        await bot.send_message(user_id, "⚠️ Sorry, the product file is missing. Please contact support.")
     except Exception as e:
-        logging.error(f"Failed to send PDF to {user_id}: {e}")
+        logging.error(f"❌ Failed to send PDF to {user_id}: {e}")
 
 
-# --- اسکنر بلاک‌چین TRON ---
+# --- اسکنر تراکنش TRON (با مدیریت صحیح session) ---
 async def monitor_transactions():
-    import aiohttp
     url = f"https://api.trongrid.io/v1/accounts/{WALLET_ADDRESS}/transactions/trc20"
     sent_txs = set()
     while True:
@@ -99,23 +103,20 @@ async def handle_webhook(request: web.Request):
 
 
 async def set_webhook_handler(request: web.Request):
-    """Endpoint to manually set the webhook (for debugging)"""
     try:
-        result = await bot.set_webhook(WEBHOOK_URL)
-        return web.json_response({"success": True, "webhook_set": result, "url": WEBHOOK_URL})
+        await bot.set_webhook(WEBHOOK_URL)
+        return web.json_response({"success": True, "url": WEBHOOK_URL})
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
 
 # --- Lifecycle ---
 async def on_startup(app: web.Application):
-    # 1. تنظیم Webhook
     try:
         await bot.set_webhook(WEBHOOK_URL)
         logging.info("✅ Telegram webhook set successfully")
     except Exception as e:
         logging.error(f"❌ Failed to set webhook: {e}")
-    # 2. راه‌اندازی اسکنر تراکنش
     asyncio.create_task(monitor_transactions())
     logging.info("🔄 Transaction scanner started")
 
@@ -128,11 +129,11 @@ async def on_shutdown(app: web.Application):
 # --- اجرای اصلی ---
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-
+    
     app = web.Application()
     app.router.add_post(WEBHOOK_PATH, handle_webhook)
-    app.router.add_get("/", lambda r: web.Response(text="OK"))  # برای Render health check
-    app.router.add_get("/setwebhook", set_webhook_handler)    # برای تنظیم دستی Webhook
+    app.router.add_get("/", lambda r: web.Response(text="OK"))          # Health check for Render
+    app.router.add_get("/setwebhook", set_webhook_handler)            # Manual webhook setup
 
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)

@@ -7,12 +7,12 @@ from aiogram.types import Message
 from aiohttp import web
 
 # --- تنظیمات ---
-BOT_TOKEN = "8334390292:AAG72ghgfOz85zOH3WrK7-2_rW6tx41yLVs"  # <<< اینجا توکن رباتت رو جایگزین کن
+BOT_TOKEN = "8334390292:AAG6vqWrK7-2_rW6tx41yLVs"
 WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
-WEBHOOK_URL = f"https://grokbot-1dwv.onrender.com{WEBHOOK_PATH}"  # <<< لینک Render فعلیت
+WEBHOOK_URL = f"https://grokbot-1dwv.onrender.com{WEBHOOK_PATH}"
 WALLET_ADDRESS = "TPSoFC1qUmzCt7ukgGAMnYwW1CUJeZhiU7"
 USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"  # USDT TRC20
-MIN_AMOUNT = 29_000_000  # 29 USDT in SUN (1 USDT = 1,000,000 SUN)
+MIN_AMOUNT = 29_000_000  # 29 USDT = 29,000,000 SUN
 PDF_PATH = "prompts.pdf"
 
 # --- راه‌اندازی ---
@@ -59,7 +59,7 @@ async def send_pdf(user_id: int):
         logging.error(f"Failed to send PDF to {user_id}: {e}")
 
 
-# --- اسکنر تراکنش (در پس‌زمینه) ---
+# --- اسکنر بلاک‌چین TRON ---
 async def monitor_transactions():
     import aiohttp
     url = f"https://api.trongrid.io/v1/accounts/{WALLET_ADDRESS}/transactions/trc20"
@@ -85,7 +85,7 @@ async def monitor_transactions():
         await asyncio.sleep(30)
 
 
-# --- Webhook handler ---
+# --- Webhook Handlers ---
 async def handle_webhook(request: web.Request):
     if request.path == WEBHOOK_PATH:
         try:
@@ -93,24 +93,36 @@ async def handle_webhook(request: web.Request):
             await dp.feed_webhook_update(bot, update)
             return web.Response()
         except Exception as e:
-            logging.error(f"Webhook error: {e}")
+            logging.error(f"Webhook processing error: {e}")
             return web.Response(status=500)
-    else:
-        return web.Response(text="OK")
+    return web.Response(text="OK")
 
 
-# --- Life-cycle handlers ---
+async def set_webhook_handler(request: web.Request):
+    """Endpoint to manually set the webhook (for debugging)"""
+    try:
+        result = await bot.set_webhook(WEBHOOK_URL)
+        return web.json_response({"success": True, "webhook_set": result, "url": WEBHOOK_URL})
+    except Exception as e:
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+# --- Lifecycle ---
 async def on_startup(app: web.Application):
-    # تنظیم webhook در تلگرام
-    await bot.set_webhook(WEBHOOK_URL)
-    # اسکنر رو در پس‌زمینه راه‌اندازی کن
+    # 1. تنظیم Webhook
+    try:
+        await bot.set_webhook(WEBHOOK_URL)
+        logging.info("✅ Telegram webhook set successfully")
+    except Exception as e:
+        logging.error(f"❌ Failed to set webhook: {e}")
+    # 2. راه‌اندازی اسکنر تراکنش
     asyncio.create_task(monitor_transactions())
-    logging.info("✅ Webhook set & scanner started")
+    logging.info("🔄 Transaction scanner started")
 
 
 async def on_shutdown(app: web.Application):
     await bot.delete_webhook(drop_pending_updates=True)
-    logging.info("🔌 Webhook removed")
+    logging.info("🔌 Webhook removed on shutdown")
 
 
 # --- اجرای اصلی ---
@@ -120,6 +132,7 @@ if __name__ == "__main__":
     app = web.Application()
     app.router.add_post(WEBHOOK_PATH, handle_webhook)
     app.router.add_get("/", lambda r: web.Response(text="OK"))  # برای Render health check
+    app.router.add_get("/setwebhook", set_webhook_handler)    # برای تنظیم دستی Webhook
 
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
